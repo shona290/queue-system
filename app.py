@@ -12,7 +12,6 @@ def init_db():
         conn = sqlite3.connect('queue.db', timeout=20)
         c = conn.cursor()
         
-        # Drop old tables to ensure clean, matching schema on startup
         c.execute("DROP TABLE IF EXISTS tokens")
         c.execute("DROP TABLE IF EXISTS counters")
         c.execute("DROP TABLE IF EXISTS users")
@@ -20,7 +19,8 @@ def init_db():
         c.execute('''CREATE TABLE counters (
                         id INTEGER PRIMARY KEY AUTOINCREMENT, 
                         name TEXT, 
-                        queue_length INTEGER
+                        queue_length INTEGER,
+                        avg_service_time INTEGER DEFAULT 8
                     )''')
         
         c.execute('''CREATE TABLE tokens (
@@ -42,15 +42,19 @@ def init_db():
                         created_at TEXT
                     )''')
 
-        # Seed default staff account
         hashed_pw = generate_password_hash('Staff@123')
         c.execute('''INSERT INTO users (username, password_hash, role, name, active, created_at)
                      VALUES (?, ?, ?, ?, 1, datetime('now'))''',
                   ('staff01', hashed_pw, 'STAFF', 'Default Staff Member'))
 
-        # Seed default counters
-        for d in ["Cash Deposit", "Account Opening", "Customer Inquiry"]:
-            c.execute("INSERT INTO counters (name, queue_length) VALUES (?, 0)", (d,))
+        # Seed counters with real default average service times (in minutes)
+        counters_seed = [
+            ("Cash Deposit", 0, 5),
+            ("Account Opening", 0, 12),
+            ("Customer Inquiry", 0, 7)
+        ]
+        for name, q_len, avg_time in counters_seed:
+            c.execute("INSERT INTO counters (name, queue_length, avg_service_time) VALUES (?, ?, ?)", (name, q_len, avg_time))
 
         conn.commit()
         conn.close()
@@ -71,6 +75,7 @@ def index():
             name = request.form.get('customer_name', 'Guest')
             purpose = request.form.get('purpose', '').lower()
             
+            # AI Intent Understanding & Mapping
             if any(word in purpose for word in ['cash', 'deposit', 'withdraw', 'money', 'pay', 'cheque']):
                 dept = "Cash Deposit"
             elif any(word in purpose for word in ['open', 'new', 'account', 'sign up']):
@@ -81,32 +86,49 @@ def index():
             conn = get_db_connection()
             c = conn.cursor()
 
-            c.execute("SELECT id FROM counters WHERE name=?", (dept,))
-            counter = c.fetchone()
+            # Fetch all active counters and calculate real estimated wait times
+            counters_raw = c.execute("SELECT * FROM counters").fetchall()
             
-            if counter:
-                counter_id = counter['id']
-            else:
-                c.execute("INSERT INTO counters (name, queue_length) VALUES (?, 0)", (dept,))
-                conn.commit()
-                c.execute("SELECT id FROM counters WHERE name=?", (dept,))
-                counter_id = c.fetchone()['id']
+            counters_evaluated = []
+            target_counter_id = None
+            
+            for cnt in counters_raw:
+                est_wait = cnt['queue_length'] * cnt['avg_service_time']
+                is_target = (cnt['name'] == dept)
+                if is_target:
+                    target_counter_id = cnt['id']
+                counters_evaluated.append({
+                    'id': cnt['id'],
+                    'name': cnt['name'],
+                    'queue_length': cnt['queue_length'],
+                    'avg_service_time': cnt['avg_service_time'],
+                    'est_wait': est_wait,
+                    'is_target': is_target
+                })
 
-            token_code = f"T-{counter_id}-{os.urandom(2).hex().upper()}"
-            
+            if not target_counter_id:
+                target_counter_id = counters_evaluated[0]['id']
+
+            # Smart Recommendation Engine: Find counter with lowest estimated wait time among compatible options
+            recommended = min(counters_evaluated, key=lambda x: x['est_wait'])
+
+            token_code = f"T-{target_counter_id}-{os.urandom(2).hex().upper()}"
             now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            c.execute("INSERT INTO tokens (token_code, customer_name, counter_id, status, created_at) VALUES (?, ?, ?, 'Waiting', ?)", (token_code, name, counter_id, now_str))
-            c.execute("UPDATE counters SET queue_length = queue_length + 1 WHERE id=?", (counter_id,))
             
-            c.execute("SELECT name, queue_length FROM counters ORDER BY queue_length ASC LIMIT 1")
-            fastest = c.fetchone()
+            c.execute("INSERT INTO tokens (token_code, customer_name, counter_id, status, created_at) VALUES (?, ?, ?, 'Waiting', ?)", (token_code, name, target_counter_id, now_str))
+            c.execute("UPDATE counters SET queue_length = queue_length + 1 WHERE id=?", (target_counter_id,))
             
             conn.commit()
             conn.close()
             
-            return render_template('token.html', token_code=token_code, dept=dept, name=name, fastest=fastest)
+            return render_template('token.html', 
+                                   token_code=token_code, 
+                                   dept=dept, 
+                                   name=name, 
+                                   recommended=recommended, 
+                                   all_counters=counters_evaluated)
         except Exception as e:
-            return f"Database Error during token creation: {e}", 500
+            return f"AI Engine Error during token generation: {e}", 500
         
     return render_template('index.html')
 
@@ -184,7 +206,7 @@ def logout():
 
 @app.route('/complete/<int:token_id>')
 def complete_service(token_id):
-    if not session.get('user_id') or session.get('role') not in ['STAFF', 'ADMIN']:
+    if not session.get('user_id') or session.get('role'] not in ['STAFF', 'ADMIN']:
         return redirect(url_for('staff_login'))
     
     try:
@@ -204,7 +226,7 @@ def complete_service(token_id):
 def track_queue():
     try:
         conn = get_db_connection()
-        counters = conn.execute("SELECT name, queue_length FROM counters").fetchall()
+        counters = conn.execute("SELECT name, queue_length, avg_service_time FROM counters").fetchall()
         conn.close()
         return render_template('track.html', counters=counters)
     except Exception as e:
