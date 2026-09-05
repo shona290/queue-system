@@ -175,7 +175,7 @@ def staff_login():
 
 @app.route('/staff')
 def staff_console():
-    if not session.get('user_id') or session.get('role'] not in ['STAFF', 'ADMIN']:
+    if not session.get('user_id') or session.get('role') not in ('STAFF', 'ADMIN'):
         return redirect(url_for('staff_login'))
 
     try:
@@ -197,7 +197,7 @@ def staff_console():
 
 @app.route('/staff/action/<action_type>/<int:token_id>')
 def staff_action(action_type, token_id):
-    if not session.get('user_id') or session.get('role'] not in ['STAFF', 'ADMIN']:
+    if not session.get('user_id') or session.get('role') not in ('STAFF', 'ADMIN'):
         return redirect(url_for('staff_login'))
     
     try:
