@@ -2,46 +2,61 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Staff Console</title>
+    <title>Staff Console - SmartQueue</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
-    <div class="portal-card" style="max-width: 650px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+<body style="display: block; padding: 30px;">
+    <div style="max-width: 900px; margin: 0 auto; background: var(--card-bg); padding: 30px; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; margin-bottom: 25px;">
             <div>
-                <h2>Staff Console</h2>
-                <p style="margin:0; font-size:13px; color:#6b7280;">Manage live active tokens</p>
+                <h2 style="margin: 0; color: var(--text-main);">Staff Console</h2>
+                <p style="margin: 4px 0 0 0; color: var(--text-muted);">Welcome, {{ staff_name }} | Completed Today: {{ completed_count }}</p>
             </div>
-            <a href="/logout" style="background: #fee2e2; color: #991b1b; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600;">Logout</a>
+            <a href="/logout" style="color: var(--error); font-weight: 600; text-decoration: none;">Logout</a>
         </div>
+
+        <h3 style="color: var(--text-main); margin-bottom: 15px;">Active Queue Management</h3>
         
         {% if waiting %}
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-            <thead>
-                <tr style="border-bottom: 2px solid #e5e7eb; text-align: left;">
-                    <th style="padding: 10px;">Token</th>
-                    <th style="padding: 10px;">Customer</th>
-                    <th style="padding: 10px;">Department</th>
-                    <th style="padding: 10px;">Wait Time</th>
-                    <th style="padding: 10px;">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in waiting %}
-                <tr style="border-bottom: 1px solid #f3f4f6;">
-                    <td style="padding: 12px; font-weight: bold; color: #4f46e5;">{{ row[1] }}</td>
-                    <td style="padding: 12px;">{{ row[2] }}</td>
-                    <td style="padding: 12px;">{{ row[3] }}</td>
-                    <td style="padding: 12px; color: #d97706; font-weight: 600;">{{ row[4] }} mins</td>
-                    <td style="padding: 12px;">
-                        <a href="/complete/{{ row[0] }}" style="background: #10b981; color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600;">Complete ✓</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 14px;">
+                        <th style="padding: 12px;">Token</th>
+                        <th style="padding: 12px;">Customer</th>
+                        <th style="padding: 12px;">Department</th>
+                        <th style="padding: 12px;">Status</th>
+                        <th style="padding: 12px; text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in waiting %}
+                    <tr style="border-bottom: 1px solid var(--border-color); font-size: 14px;">
+                        <td style="padding: 12px; font-weight: 700; color: var(--primary);">{{ row.token_code }}</td>
+                        <td style="padding: 12px;">{{ row.customer_name }}</td>
+                        <td style="padding: 12px;">{{ row.counter_name }}</td>
+                        <td style="padding: 12px;">
+                            <span style="padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; background: {% if row.status == 'Serving' %}#d1fae5; color: #065f46{% elif row.status == 'On_Hold' %}#fef3c7; color: #92400e{% else %}#e0f2fe; color: #0369a1{% endif %};">
+                                {{ row.status }}
+                            </span>
+                        </td>
+                        <td style="padding: 12px; text-align: right;">
+                            {% if row.status == 'Waiting' %}
+                            <a href="/staff/action/serve/{{ row.id }}" style="background: var(--primary); color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; margin-right: 4px;">Serve</a>
+                            {% endif %}
+                            {% if row.status == 'Serving' %}
+                            <a href="/staff/action/complete/{{ row.id }}" style="background: var(--success); color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; margin-right: 4px;">Complete</a>
+                            <a href="/staff/action/hold/{{ row.id }}" style="background: var(--warning); color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; margin-right: 4px;">Hold</a>
+                            {% endif %}
+                            <a href="/staff/action/skip/{{ row.id }}" style="background: var(--error); color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 12px;">Skip</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
-        <p style="text-align: center; color: #6b7280; padding: 30px 0;">No active customers waiting in the queue.</p>
+        <p style="color: var(--text-muted); text-align: center; padding: 30px;">No customers currently waiting in the queue.</p>
         {% endif %}
     </div>
 </body>

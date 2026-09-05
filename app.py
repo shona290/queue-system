@@ -82,7 +82,6 @@ def index():
             conn = get_db_connection()
             c = conn.cursor()
 
-            # Check if customer already has an active token
             existing = c.execute("SELECT token_code FROM tokens WHERE customer_name = ? AND status = 'Waiting'", (name,)).fetchone()
             if existing:
                 conn.close()
@@ -176,58 +175,57 @@ def staff_login():
 
 @app.route('/staff')
 def staff_console():
-    if not session.get('user_id') or session.get('role') not in ['STAFF', 'ADMIN']:
+    if not session.get('user_id') or session.get('role'] not in ['STAFF', 'ADMIN']:
         return redirect(url_for('staff_login'))
 
     try:
         conn = get_db_connection()
-        raw_waiting = conn.execute("""
-            SELECT t.id, t.token_code, t.customer_name, c.name, t.created_at
+        waiting_tokens = conn.execute("""
+            SELECT t.id, t.token_code, t.customer_name, c.name as counter_name, t.status, t.created_at
             FROM tokens t 
             JOIN counters c ON t.counter_id = c.id 
-            WHERE t.status = 'Waiting'
+            WHERE t.status IN ('Waiting', 'Serving', 'On_Hold')
             ORDER BY t.id ASC
         """).fetchall()
+
+        completed_count = conn.execute("SELECT COUNT(*) as cnt FROM tokens WHERE status = 'Completed'").fetchone()['cnt']
         conn.close()
 
-        waiting = []
-        now = datetime.now()
-        for row in raw_waiting:
-            wait_mins = 0
-            if row['created_at']:
-                try:
-                    created_time = datetime.strptime(row['created_at'], '%Y-%m-%d %H:%M:%S')
-                    wait_mins = int((now - created_time).total_seconds() / 60)
-                except Exception:
-                    wait_mins = 0
-            waiting.append((row['id'], row['token_code'], row['customer_name'], row['name'], max(0, wait_mins)))
-
-        return render_template('staff.html', waiting=waiting, staff_name=session.get('name'))
+        return render_template('staff.html', waiting=waiting_tokens, staff_name=session.get('name'), completed_count=completed_count)
     except Exception as e:
         return f"Staff Console Error: {e}", 500
 
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('index'))
-
-@app.route('/complete/<int:token_id>')
-def complete_service(token_id):
-    if not session.get('user_id') or session.get('role') not in ['STAFF', 'ADMIN']:
+@app.route('/staff/action/<action_type>/<int:token_id>')
+def staff_action(action_type, token_id):
+    if not session.get('user_id') or session.get('role'] not in ['STAFF', 'ADMIN']:
         return redirect(url_for('staff_login'))
     
     try:
         conn = get_db_connection()
-        row = conn.execute("SELECT counter_id FROM tokens WHERE id=?", (token_id,)).fetchone()
-        if row:
-            conn.execute("UPDATE tokens SET status='Completed' WHERE id=?", (token_id,))
-            conn.execute("UPDATE counters SET queue_length = MAX(0, queue_length - 1) WHERE id=?", (row['counter_id'],))
+        token = conn.execute("SELECT * FROM tokens WHERE id=?", (token_id,)).fetchone()
+        
+        if token:
+            if action_type == 'serve':
+                conn.execute("UPDATE tokens SET status='Serving' WHERE id=?", (token_id,))
+            elif action_type == 'complete':
+                conn.execute("UPDATE tokens SET status='Completed' WHERE id=?", (token_id,))
+                conn.execute("UPDATE counters SET queue_length = MAX(0, queue_length - 1) WHERE id=?", (token['counter_id'],))
+            elif action_type == 'hold':
+                conn.execute("UPDATE tokens SET status='On_Hold' WHERE id=?", (token_id,))
+            elif action_type == 'skip':
+                conn.execute("UPDATE tokens SET status='Skipped' WHERE id=?", (token_id,))
+                conn.execute("UPDATE counters SET queue_length = MAX(0, queue_length - 1) WHERE id=?", (token['counter_id'],))
             conn.commit()
         conn.close()
     except Exception:
         pass
         
     return redirect(url_for('staff_console'))
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('index'))
 
 @app.route('/track')
 def track_queue():
