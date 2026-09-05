@@ -12,13 +12,18 @@ def init_db():
         conn = sqlite3.connect('queue.db', timeout=20)
         c = conn.cursor()
         
-        c.execute('''CREATE TABLE IF NOT EXISTS counters (
+        # Drop old tables to ensure clean, matching schema on startup
+        c.execute("DROP TABLE IF EXISTS tokens")
+        c.execute("DROP TABLE IF EXISTS counters")
+        c.execute("DROP TABLE IF EXISTS users")
+        
+        c.execute('''CREATE TABLE counters (
                         id INTEGER PRIMARY KEY AUTOINCREMENT, 
                         name TEXT, 
                         queue_length INTEGER
                     )''')
         
-        c.execute('''CREATE TABLE IF NOT EXISTS tokens (
+        c.execute('''CREATE TABLE tokens (
                         id INTEGER PRIMARY KEY AUTOINCREMENT, 
                         token_code TEXT, 
                         customer_name TEXT, 
@@ -27,7 +32,7 @@ def init_db():
                         created_at TEXT
                     )''')
 
-        c.execute('''CREATE TABLE IF NOT EXISTS users (
+        c.execute('''CREATE TABLE users (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         username TEXT UNIQUE NOT NULL,
                         password_hash TEXT NOT NULL,
@@ -37,17 +42,15 @@ def init_db():
                         created_at TEXT
                     )''')
 
-        c.execute("SELECT id FROM users WHERE username = ?", ('staff01',))
-        if not c.fetchone():
-            hashed_pw = generate_password_hash('Staff@123')
-            c.execute('''INSERT INTO users (username, password_hash, role, name, active, created_at)
-                         VALUES (?, ?, ?, ?, 1, datetime('now'))''',
-                      ('staff01', hashed_pw, 'STAFF', 'Default Staff Member'))
+        # Seed default staff account
+        hashed_pw = generate_password_hash('Staff@123')
+        c.execute('''INSERT INTO users (username, password_hash, role, name, active, created_at)
+                     VALUES (?, ?, ?, ?, 1, datetime('now'))''',
+                  ('staff01', hashed_pw, 'STAFF', 'Default Staff Member'))
 
+        # Seed default counters
         for d in ["Cash Deposit", "Account Opening", "Customer Inquiry"]:
-            c.execute("SELECT id FROM counters WHERE name=?", (d,))
-            if not c.fetchone():
-                c.execute("INSERT INTO counters (name, queue_length) VALUES (?, 0)", (d,))
+            c.execute("INSERT INTO counters (name, queue_length) VALUES (?, 0)", (d,))
 
         conn.commit()
         conn.close()
