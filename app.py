@@ -46,6 +46,11 @@ def init_db():
         c.execute('''INSERT INTO users (username, password_hash, role, name, active, created_at)
                      VALUES (?, ?, ?, ?, 1, datetime('now'))''',
                   ('staff01', hashed_pw, 'STAFF', 'Default Staff Member'))
+                  
+        admin_pw = generate_password_hash('Admin@123')
+        c.execute('''INSERT INTO users (username, password_hash, role, name, active, created_at)
+                     VALUES (?, ?, ?, ?, 1, datetime('now'))''',
+                  ('admin01', admin_pw, 'ADMIN', 'System Administrator'))
 
         counters_seed = [
             ("Cash Deposit", 0, 5),
@@ -156,7 +161,7 @@ def staff_login():
             
             if user and check_password_hash(user['password_hash'], password):
                 if user['active'] != 1:
-                    error = "This staff account is inactive."
+                    error = "This account is inactive."
                 elif user['role'] not in ['STAFF', 'ADMIN']:
                     error = "Access denied."
                 else:
@@ -165,6 +170,8 @@ def staff_login():
                     session['username'] = user['username']
                     session['role'] = user['role']
                     session['name'] = user['name']
+                    if user['role'] == 'ADMIN':
+                        return redirect(url_for('admin_dashboard'))
                     return redirect(url_for('staff_console'))
             else:
                 error = "Invalid username or password."
@@ -195,6 +202,23 @@ def staff_console():
     except Exception as e:
         return f"Staff Console Error: {e}", 500
 
+@app.route('/admin')
+def admin_dashboard():
+    if not session.get('user_id') or session.get('role') != 'ADMIN':
+        return redirect(url_for('staff_login'))
+
+    try:
+        conn = get_db_connection()
+        counters = conn.execute("SELECT * FROM counters").fetchall()
+        total_tokens = conn.execute("SELECT COUNT(*) as cnt FROM tokens").fetchone()['cnt']
+        completed_tokens = conn.execute("SELECT COUNT(*) as cnt FROM tokens WHERE status='Completed'").fetchone()['cnt']
+        active_users = conn.execute("SELECT * FROM users").fetchall()
+        conn.close()
+
+        return render_template('admin.html', counters=counters, total_tokens=total_tokens, completed_tokens=completed_tokens, users=active_users, admin_name=session.get('name'))
+    except Exception as e:
+        return f"Admin Dashboard Error: {e}", 500
+
 @app.route('/staff/action/<action_type>/<int:token_id>')
 def staff_action(action_type, token_id):
     if not session.get('user_id') or session.get('role') not in ('STAFF', 'ADMIN'):
@@ -220,6 +244,8 @@ def staff_action(action_type, token_id):
     except Exception:
         pass
         
+    if session.get('role') == 'ADMIN':
+        return redirect(url_for('admin_dashboard'))
     return redirect(url_for('staff_console'))
 
 @app.route('/logout')
