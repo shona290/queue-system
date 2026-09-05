@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SmartQueue Portal</title>
+    <title>SmartQueue - Intelligent Queue Management</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -12,24 +12,24 @@
             <p>Intelligent Automated Queue Management</p>
         </div>
         
-        <form method="POST">
+        <form method="POST" action="/">
             <div class="form-group">
                 <label>Your Full Name</label>
                 <input type="text" name="customer_name" required placeholder="e.g., Alex Morgan">
             </div>
-            
+
             <div class="form-group">
                 <label>What do you need help with today?</label>
-                <input type="text" name="purpose" required placeholder="e.g., I want to deposit cash or open an account">
-                <small class="hint">Our system will intelligently route you to the right department.</small>
+                <input type="text" name="purpose" required placeholder="e.g., i want to deposit cash or open an account">
+                <span class="hint">Our system will intelligently route you to the right department.</span>
             </div>
             
             <button type="submit" class="btn-primary">Generate Smart Token</button>
         </form>
-
+        
         <div class="portal-footer">
             <a href="/track">📊 Live Queue Status</a>
-            <a href="/staff-login">🔐 Staff Portal</a>
+            <a href="/staff/login">🔒 Staff Portal</a>
         </div>
     </div>
 </body>

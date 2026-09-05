@@ -15,9 +15,10 @@ def get_db_connection():
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        name = request.form.get('customer_name')
+        name = request.form.get('customer_name', 'Guest')
         purpose = request.form.get('purpose', '').lower()
         
+        # Intelligent Service Recommendation & Routing
         if any(word in purpose for word in ['cash', 'deposit', 'withdraw', 'money', 'pay', 'cheque']):
             dept = "Cash Deposit"
         elif any(word in purpose for word in ['open', 'new', 'account', 'sign up']):
@@ -28,6 +29,7 @@ def index():
         conn = get_db_connection()
         c = conn.cursor()
         
+        # Ensure default counters exist safely
         for d in ["Cash Deposit", "Account Opening", "Customer Inquiry"]:
             c.execute("SELECT id FROM counters WHERE name=?", (d,))
             if not c.fetchone():
@@ -36,13 +38,22 @@ def index():
 
         c.execute("SELECT id FROM counters WHERE name=?", (dept,))
         counter = c.fetchone()
-        counter_id = counter['id']
+        
+        if counter:
+            counter_id = counter['id']
+        else:
+            c.execute("INSERT INTO counters (name, queue_length) VALUES (?, 0)", (dept,))
+            conn.commit()
+            c.execute("SELECT id FROM counters WHERE name=?", (dept,))
+            counter_id = c.fetchone()['id']
+
         token_code = f"T-{counter_id}-{os.urandom(2).hex().upper()}"
         
         now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         c.execute("INSERT INTO tokens (token_code, customer_name, counter_id, status, created_at) VALUES (?, ?, ?, 'Waiting', ?)", (token_code, name, counter_id, now_str))
         c.execute("UPDATE counters SET queue_length = queue_length + 1 WHERE id=?", (counter_id,))
         
+        # Find fastest alternative department recommendation
         c.execute("SELECT name, queue_length FROM counters ORDER BY queue_length ASC LIMIT 1")
         fastest = c.fetchone()
         
