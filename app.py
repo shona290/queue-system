@@ -47,7 +47,6 @@ def init_db():
                      VALUES (?, ?, ?, ?, 1, datetime('now'))''',
                   ('staff01', hashed_pw, 'STAFF', 'Default Staff Member'))
 
-        # Seed counters with real default average service times (in minutes)
         counters_seed = [
             ("Cash Deposit", 0, 5),
             ("Account Opening", 0, 12),
@@ -75,7 +74,6 @@ def index():
             name = request.form.get('customer_name', 'Guest')
             purpose = request.form.get('purpose', '').lower()
             
-            # AI Intent Understanding & Mapping
             if any(word in purpose for word in ['cash', 'deposit', 'withdraw', 'money', 'pay', 'cheque']):
                 dept = "Cash Deposit"
             elif any(word in purpose for word in ['open', 'new', 'account', 'sign up']):
@@ -86,7 +84,6 @@ def index():
             conn = get_db_connection()
             c = conn.cursor()
 
-            # Fetch all active counters and calculate real estimated wait times
             counters_raw = c.execute("SELECT * FROM counters").fetchall()
             
             counters_evaluated = []
@@ -109,7 +106,6 @@ def index():
             if not target_counter_id:
                 target_counter_id = counters_evaluated[0]['id']
 
-            # Smart Recommendation Engine: Find counter with lowest estimated wait time among compatible options
             recommended = min(counters_evaluated, key=lambda x: x['est_wait'])
 
             token_code = f"T-{target_counter_id}-{os.urandom(2).hex().upper()}"
@@ -206,7 +202,7 @@ def logout():
 
 @app.route('/complete/<int:token_id>')
 def complete_service(token_id):
-    if not session.get('user_id') or session.get('role'] not in ['STAFF', 'ADMIN']:
+    if not session.get('user_id') or session.get('role') not in ['STAFF', 'ADMIN']:
         return redirect(url_for('staff_login'))
     
     try:
