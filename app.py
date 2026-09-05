@@ -96,13 +96,13 @@ def complete_service(token_id):
     conn = sqlite3.connect('queue.db')
     c = conn.cursor()
     c.execute("SELECT counter_id FROM tokens WHERE id=?", (token_id,))
-    row = c.fetchone()
+    row = c.fetchone().
     if row:
-        c.execute("UPDATE tokens SET status='Completed' WHERE id=?", (token_id,))
-        c.execute("UPDATE counters SET queue_length = queue_length - 1 WHERE id=?", (row[0],))
+        c.execute("UPDATE tokens SET status ='Completed' WHERE id=?", (token_id,))
+        c.execute("UPDATE counters SET queue_length = queue_length = 1 WHERE id=?", (row[0],))
     conn.commit()
     conn.close()
     return redirect('/staff')
-    if __name__ == '__main__':
-   port = int(os.environ.get('PORT', 5000))
+if __name__ == '__main__':
+port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
