@@ -6,7 +6,13 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="portal-card">
+    <!-- Judge Evaluation Notification Banner -->
+    <div style="background: #e0f2fe; border-bottom: 2px solid #0284c7; padding: 12px 20px; text-align: center; font-size: 14px; color: #0369a1; font-weight: 600; display: flex; justify-content: center; align-items: center; gap: 15px;">
+        <span>🔍 <strong>Judge / Evaluator Guide:</strong> Test Staff Login (<code style="background: white; padding: 2px 6px; border-radius: 4px;">staff01</code> / <code style="background: white; padding: 2px 6px; border-radius: 4px;">Staff@123</code>) or Admin (<code style="background: white; padding: 2px 6px; border-radius: 4px;">admin01</code> / <code style="background: white; padding: 2px 6px; border-radius: 4px;">Admin@123</code>)</span>
+        <a href="/display" target="_blank" style="background: #0284c7; color: white; padding: 4px 10px; border-radius: 6px; text-decoration: none; font-size: 12px;">Open Live TV Display 📺</a>
+    </div>
+
+    <div class="portal-card" style="margin-top: 40px;">
         <div class="brand-header">
             <h2>SmartQueue</h2>
             <p>Intelligent Automated Queue Management</p>
@@ -23,6 +29,11 @@
             </div>
 
             <div class="form-group">
+                <label>WhatsApp / Mobile Number (for alerts)</label>
+                <input type="tel" name="phone_number" placeholder="e.g., +1234567890">
+            </div>
+
+            <div class="form-group">
                 <label>What do you need help with today?</label>
                 <input type="text" name="purpose" required placeholder="e.g., i want to deposit cash or open an account">
                 <span class="hint">Our system will intelligently route you to the right department.</span>
@@ -33,6 +44,7 @@
         
         <div class="portal-footer">
             <a href="/track">📊 Live Queue Status</a>
+            <a href="/display" target="_blank">📺 Public Display TV</a>
             <a href="/staff/login">🔒 Staff Portal</a>
         </div>
     </div>
