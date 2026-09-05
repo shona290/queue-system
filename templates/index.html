@@ -2,32 +2,34 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartQueue - Join</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f0f4f8; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: white; padding: 30px; border-radius: 12px; width: 320px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); text-align: center; }
-        h2 { color: #102a43; margin-top: 0; }
-        p { color: #627d98; font-size: 14px; margin-bottom: 20px; }
-        select, button { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #bcccdc; border-radius: 6px; box-sizing: border-box; }
-        select { background: white; }
-        button { background: #0ea5e9; color: white; border: none; font-size: 16px; font-weight: bold; cursor: pointer; }
-        button:hover { background: #0284c7; }
-    </style>
+    <title>SmartQueue Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="card">
-        <h2>SmartQueue</h2>
-        <p>Select your service department to get an intelligently routed digital token.</p>
-        <form action="/join" method="POST">
-            <select name="department_id" required>
-                <option value="" disabled selected>-- Select Department --</option>
-                {% for d in depts %}
-                    <option value="{{ d[0] }}">{{ d[1] }}</option>
-                {% endfor %}
+    <div class="container">
+        <h2>SmartQueue Portal</h2>
+        <p>Welcome! Select your department to join the queue.</p>
+        
+        <form method="POST">
+            <label>Your Name:</label>
+            <input type="text" name="customer_name" required placeholder="Enter your name">
+            
+            <label>Select Department:</label>
+            <select name="department" required>
+                <option value="Cash Deposit">Cash Deposit</option>
+                <option value="Account Opening">Account Opening</option>
+                <option value="Customer Inquiry">Customer Inquiry</option>
             </select>
+            
             <button type="submit">Generate Token</button>
         </form>
+
+        <hr style="margin: 20px 0;">
+        
+        <div style="text-align: center;">
+            <a href="/track" style="margin-right: 15px;">📊 View Live Queue Status</a>
+            <a href="/staff?key=mysecretstaffkey">🔐 Staff Console</a>
+        </div>
     </div>
 </body>
 </html>
