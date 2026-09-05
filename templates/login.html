@@ -2,26 +2,32 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Staff Login</title>
+    <title>Staff Login - SmartQueue</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="portal-card">
         <div class="brand-header">
-            <h2>Staff Authentication</h2>
-            <p>Enter your secure passcode to access console</p>
+            <h2>SmartQueue</h2>
+            <p>Staff Console Authentication</p>
         </div>
         
         {% if error %}
         <div class="alert-error">{{ error }}</div>
         {% endif %}
 
-        <form method="POST">
+        <form method="POST" action="/staff/login">
             <div class="form-group">
-                <label>Staff Password</label>
+                <label>Username / Email</label>
+                <input type="text" name="username" required placeholder="Enter username (e.g., staff01)">
+            </div>
+
+            <div class="form-group">
+                <label>Password</label>
                 <input type="password" name="password" required placeholder="Enter password">
             </div>
-            <button type="submit" class="btn-primary">Login to Console</button>
+            
+            <button type="submit" class="btn-primary">Login to Staff Console</button>
         </form>
         
         <div class="portal-footer">
