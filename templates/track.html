@@ -2,37 +2,45 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Live Queue Tracking</title>
+    <title>Queue Journey - SmartQueue</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta http-equiv="refresh" content="10">
 </head>
-<body>
-    <div class="portal-card" style="max-width: 500px;">
-        <div class="brand-header">
-            <h2>Live Queue Status</h2>
-            <p>Real-time updates for all departments</p>
+<body style="display: block; padding: 30px;">
+    <div style="max-width: 800px; margin: 0 auto; background: var(--card-bg); padding: 30px; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; margin-bottom: 25px;">
+            <div>
+                <h2 style="margin: 0; color: var(--text-main);">🟢 Live Queue Journey</h2>
+                <p style="margin: 4px 0 0 0; color: var(--text-muted);">Real-time department wait metrics</p>
+            </div>
+            <a href="/" style="color: var(--primary); font-weight: 600; text-decoration: none;">← Home</a>
         </div>
-        
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-            <thead>
-                <tr style="border-bottom: 2px solid #e5e7eb; text-align: left;">
-                    <th style="padding: 10px;">Department</th>
-                    <th style="padding: 10px;">People Waiting</th>
-                    <th style="padding: 10px;">Est. Wait Time</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for counter in counters %}
-                <tr style="border-bottom: 1px solid #f3f4f6;">
-                    <td style="padding: 12px; font-weight: 600;">{{ counter[0] }}</td>
-                    <td style="padding: 12px; color: #4f46e5; font-weight: bold;">{{ counter[1] }} members</td>
-                    <td style="padding: 12px; color: #6b7280;">~{{ counter[1] * 3 }} mins</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        
-        <div style="text-align: center;">
-            <a href="/" style="color: #4f46e5; text-decoration: none; font-weight: 600;">← Back to Home</a>
+
+        <h3 style="color: var(--text-main); margin-bottom: 15px;">Department Workload</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 30px;">
+            {% for c in counters %}
+            <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
+                <h4 style="margin: 0 0 8px 0; font-size: 16px; color: var(--text-main);">{{ c.name }}</h4>
+                <p style="margin: 4px 0; font-size: 14px; color: var(--text-muted);">Waiting: <strong>{{ c.queue_length }}</strong></p>
+                <p style="margin: 4px 0; font-size: 14px; color: var(--text-muted);">Est. Wait: ~<strong>{{ c.queue_length * c.avg_service_time }} mins</strong></p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <h3 style="color: var(--text-main); margin-bottom: 15px;">Active Queue Stream</h3>
+        <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
+            {% if tokens %}
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    {% for t in tokens %}
+                    <div style="background: white; padding: 12px 18px; border-radius: 8px; border: 1px solid var(--border-color); font-weight: 600;">
+                        <span style="color: var(--primary);">{{ t.token_code }}</span> 
+                        <span style="font-size: 12px; color: var(--text-muted); display: block;">{{ t.counter_name }} ({{ t.status }})</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p style="color: var(--text-muted); margin: 0;">No active tokens currently in progress.</p>
+            {% endif %}
         </div>
     </div>
 </body>

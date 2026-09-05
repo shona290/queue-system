@@ -258,10 +258,40 @@ def track_queue():
     try:
         conn = get_db_connection()
         counters = conn.execute("SELECT name, queue_length, avg_service_time FROM counters").fetchall()
+        tokens = conn.execute("""
+            SELECT t.token_code, t.status, c.name as counter_name 
+            FROM tokens t 
+            JOIN counters c ON t.counter_id = c.id 
+            WHERE t.status IN ('Waiting', 'Serving')
+            ORDER BY t.id ASC
+        """).fetchall()
         conn.close()
-        return render_template('track.html', counters=counters)
+        return render_template('track.html', counters=counters, tokens=tokens)
     except Exception as e:
         return f"Tracking Error: {e}", 500
+
+@app.route('/display')
+def public_display():
+    try:
+        conn = get_db_connection()
+        serving = conn.execute("""
+            SELECT t.token_code, c.name as counter_name 
+            FROM tokens t 
+            JOIN counters c ON t.counter_id = c.id 
+            WHERE t.status = 'Serving'
+        """).fetchall()
+        
+        next_tokens = conn.execute("""
+            SELECT t.token_code, c.name as counter_name 
+            FROM tokens t 
+            JOIN counters c ON t.counter_id = c.id 
+            WHERE t.status = 'Waiting'
+            LIMIT 4
+        """).fetchall()
+        conn.close()
+        return render_template('display.html', serving=serving, next_tokens=next_tokens)
+    except Exception as e:
+        return f"Display Error: {e}", 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
