@@ -16,7 +16,7 @@ def init_db():
                     customer_name TEXT, 
                     counter_id INTEGER, 
                     status TEXT, 
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TEXT
                 )''')
     conn.commit()
     conn.close()
@@ -40,7 +40,7 @@ def index():
         conn = sqlite3.connect('queue.db')
         c = conn.cursor()
         
-        # Ensure counters exist
+        # Ensure default counters exist
         for d in ["Cash Deposit", "Account Opening", "Customer Inquiry"]:
             c.execute("SELECT id FROM counters WHERE name=?", (d,))
             if not c.fetchone():
@@ -52,7 +52,8 @@ def index():
         counter_id = counter[0]
         token_code = f"T-{counter_id}-{os.urandom(2).hex().upper()}"
         
-        c.execute("INSERT INTO tokens (token_code, customer_name, counter_id, status) VALUES (?, ?, ?, 'Waiting')", (token_code, name, counter_id))
+        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        c.execute("INSERT INTO tokens (token_code, customer_name, counter_id, status, created_at) VALUES (?, ?, ?, 'Waiting', ?)", (token_code, name, counter_id, now_str))
         c.execute("UPDATE counters SET queue_length = queue_length + 1 WHERE id=?", (counter_id,))
         
         # Find fastest alternative department recommendation
@@ -85,17 +86,30 @@ def staff_console():
 
     conn = sqlite3.connect('queue.db')
     c = conn.cursor()
-    # Fetch waiting tokens and compute wait time in minutes
     c.execute("""
-        SELECT t.id, t.token_code, t.customer_name, c.name, 
-               (strftime('%s', 'now') - strftime('%s', t.created_at)) / 60 as wait_time
+        SELECT t.id, t.token_code, t.customer_name, c.name, t.created_at
         FROM tokens t 
         JOIN counters c ON t.counter_id = c.id 
         WHERE t.status = 'Waiting'
-        ORDER BY t.created_at ASC
+        ORDER BY t.id ASC
     """)
-    waiting = c.fetchall()
+    raw_waiting = c.fetchall()
     conn.close()
+
+    # Calculate wait times safely in Python to prevent SQLite strftime errors
+    waiting = []
+    now = datetime.now()
+    for row in raw_waiting:
+        token_id, token_code, customer_name, counter_name, created_at_str = row
+        wait_mins = 0
+        if created_at_str:
+            try:
+                created_time = datetime.strptime(created_at_str, '%Y-%m-%d %H:%M:%S')
+                wait_mins = int((now - created_time).total_seconds() / 60)
+            except Exception:
+                wait_mins = 0
+        waiting.append((token_id, token_code, customer_name, counter_name, max(0, wait_mins)))
+
     return render_template('staff.html', waiting=waiting)
 
 @app.route('/logout')
