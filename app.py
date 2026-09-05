@@ -15,6 +15,7 @@ def init_db():
         c.execute("DROP TABLE IF EXISTS tokens")
         c.execute("DROP TABLE IF EXISTS counters")
         c.execute("DROP TABLE IF EXISTS users")
+        c.execute("DROP TABLE IF EXISTS audit_logs")
         
         c.execute('''CREATE TABLE counters (
                         id INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -27,6 +28,7 @@ def init_db():
                         id INTEGER PRIMARY KEY AUTOINCREMENT, 
                         token_code TEXT, 
                         customer_name TEXT, 
+                        phone_number TEXT,
                         counter_id INTEGER, 
                         status TEXT, 
                         created_at TEXT
@@ -40,6 +42,14 @@ def init_db():
                         name TEXT NOT NULL,
                         active INTEGER DEFAULT 1,
                         created_at TEXT
+                    )''')
+
+        c.execute('''CREATE TABLE audit_logs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        staff_name TEXT,
+                        action_type TEXT,
+                        token_code TEXT,
+                        timestamp TEXT
                     )''')
 
         hashed_pw = generate_password_hash('Staff@123')
@@ -78,6 +88,7 @@ def index():
     if request.method == 'POST':
         try:
             name = request.form.get('customer_name', '').strip()
+            phone = request.form.get('phone_number', '').strip()
             purpose = request.form.get('purpose', '').lower()
             
             if not name:
@@ -126,7 +137,7 @@ def index():
             token_code = f"T-{target_counter_id}-{os.urandom(2).hex().upper()}"
             now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             
-            c.execute("INSERT INTO tokens (token_code, customer_name, counter_id, status, created_at) VALUES (?, ?, ?, 'Waiting', ?)", (token_code, name, target_counter_id, now_str))
+            c.execute("INSERT INTO tokens (token_code, customer_name, phone_number, counter_id, status, created_at) VALUES (?, ?, ?, ?, 'Waiting', ?)", (token_code, name, phone, target_counter_id, now_str))
             c.execute("UPDATE counters SET queue_length = queue_length + 1 WHERE id=?", (target_counter_id,))
             
             conn.commit()
@@ -136,6 +147,7 @@ def index():
                                    token_code=token_code, 
                                    dept=dept, 
                                    name=name, 
+                                   phone=phone,
                                    recommended=recommended, 
                                    all_counters=counters_evaluated)
         except Exception as e:
@@ -188,7 +200,7 @@ def staff_console():
     try:
         conn = get_db_connection()
         waiting_tokens = conn.execute("""
-            SELECT t.id, t.token_code, t.customer_name, c.name as counter_name, t.status, t.created_at
+            SELECT t.id, t.token_code, t.customer_name, t.phone_number, c.name as counter_name, t.status, t.created_at
             FROM tokens t 
             JOIN counters c ON t.counter_id = c.id 
             WHERE t.status IN ('Waiting', 'Serving', 'On_Hold')
@@ -213,9 +225,10 @@ def admin_dashboard():
         total_tokens = conn.execute("SELECT COUNT(*) as cnt FROM tokens").fetchone()['cnt']
         completed_tokens = conn.execute("SELECT COUNT(*) as cnt FROM tokens WHERE status='Completed'").fetchone()['cnt']
         active_users = conn.execute("SELECT * FROM users").fetchall()
+        audit_logs = conn.execute("SELECT * FROM audit_logs ORDER BY id DESC LIMIT 15").fetchall()
         conn.close()
 
-        return render_template('admin.html', counters=counters, total_tokens=total_tokens, completed_tokens=completed_tokens, users=active_users, admin_name=session.get('name'))
+        return render_template('admin.html', counters=counters, total_tokens=total_tokens, completed_tokens=completed_tokens, users=active_users, audit_logs=audit_logs, admin_name=session.get('name'))
     except Exception as e:
         return f"Admin Dashboard Error: {e}", 500
 
@@ -229,16 +242,24 @@ def staff_action(action_type, token_id):
         token = conn.execute("SELECT * FROM tokens WHERE id=?", (token_id,)).fetchone()
         
         if token:
+            staff_name = session.get('name', 'Staff')
+            now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
             if action_type == 'serve':
                 conn.execute("UPDATE tokens SET status='Serving' WHERE id=?", (token_id,))
+                conn.execute("INSERT INTO audit_logs (staff_name, action_type, token_code, timestamp) VALUES (?, ?, ?, ?)", (staff_name, 'SERVING', token['token_code'], now_str))
             elif action_type == 'complete':
                 conn.execute("UPDATE tokens SET status='Completed' WHERE id=?", (token_id,))
                 conn.execute("UPDATE counters SET queue_length = MAX(0, queue_length - 1) WHERE id=?", (token['counter_id'],))
+                conn.execute("INSERT INTO audit_logs (staff_name, action_type, token_code, timestamp) VALUES (?, ?, ?, ?)", (staff_name, 'COMPLETED', token['token_code'], now_str))
             elif action_type == 'hold':
                 conn.execute("UPDATE tokens SET status='On_Hold' WHERE id=?", (token_id,))
+                conn.execute("INSERT INTO audit_logs (staff_name, action_type, token_code, timestamp) VALUES (?, ?, ?, ?)", (staff_name, 'ON_HOLD', token['token_code'], now_str))
             elif action_type == 'skip':
                 conn.execute("UPDATE tokens SET status='Skipped' WHERE id=?", (token_id,))
                 conn.execute("UPDATE counters SET queue_length = MAX(0, queue_length - 1) WHERE id=?", (token['counter_id'],))
+                conn.execute("INSERT INTO audit_logs (staff_name, action_type, token_code, timestamp) VALUES (?, ?, ?, ?)", (staff_name, 'SKIPPED', token['token_code'], now_str))
+            
             conn.commit()
         conn.close()
     except Exception:
