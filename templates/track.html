@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SmartQueue - Live Tracking</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f4f8; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 12px; width: 350px; text-align: center; box-shadow: 0 8px 16px rgba(0,0,0,0.1); border-top: 5px solid #0ea5e9; }
+        .token { font-size: 40px; font-weight: bold; color: #0369a1; margin: 15px 0; }
+        .rec-box { background: #e0f2fe; color: #0369a1; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: left; }
+        .pulse { display: inline-block; width: 10px; height: 10px; background: #10b981; border-radius: 50%; animation: blink 1.5s infinite; margin-right: 5px; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Digital Token</h2>
+        <div class="token">{{ code }}</div>
+        
+        <div class="rec-box">
+            <strong>★ Intelligent Assignment</strong><br>
+            <strong>Counter:</strong> {{ counter }}<br>
+            <strong>Estimated Wait:</strong> ~{{ wait }} mins
+        </div>
+
+        <p id="status-text"><span class="pulse"></span><span id="current-status">Waiting in line...</span></p>
+    </div>
+
+    <script>
+        let tokenId = {{ token_id }};
+        let alerted = false;
+
+        setInterval(async function() {
+            let response = await fetch('/api/status/' + tokenId);
+            let data = await response.json();
+            
+            if (data.status === 'Completed' && !alerted) {
+                alerted = true;
+                document.getElementById('current-status').innerText = "Service Completed!";
+                document.getElementById('current-status').style.color = "#10b981";
+                document.querySelector('.pulse').style.display = 'none';
+                alert("🔔 Notification: Your turn is complete at " + "{{ counter }}" + "!");
+            }
+        }, 3000);
+    </script>
+</body>
+</html>

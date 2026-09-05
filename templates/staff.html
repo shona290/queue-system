@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartQueue - Staff Console</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f8fafc; padding: 40px; margin: 0; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        h2 { color: #0f172a; margin: 0; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .token-card { background: white; padding: 20px; border-radius: 10px; border-left: 5px solid #0ea5e9; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .token-number { font-size: 24px; font-weight: bold; color: #0369a1; margin-bottom: 10px; }
+        .details { color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 15px; }
+        .complete-btn { background: #10b981; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; }
+        .complete-btn:hover { background: #059669; }
+        .refresh-btn { padding: 10px 20px; background: #0f172a; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>Live Department Queue</h2>
+        <button class="refresh-btn" onclick="location.reload()">Refresh Data</button>
+    </div>
+
+    <div class="dashboard-grid">
+        {% if waiting %}
+            {% for t in waiting %}
+            <div class="token-card">
+                <div class="token-number">Token {{ t[1] }}</div>
+                <div class="details">
+                    <strong>Assigned Counter:</strong> {{ t[2] }}<br>
+                    <strong>Status:</strong> Waiting for Service
+                </div>
+                <a href="/complete/{{ t[0] }}" class="complete-btn">✔ Mark Completed</a>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div style="color: #64748b; font-style: italic; grid-column: 1 / -1;">No customers currently in the queue.</div>
+        {% endif %}
+    </div>
+
+</body>
+</html>
