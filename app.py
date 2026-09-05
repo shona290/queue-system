@@ -69,20 +69,31 @@ def get_db_connection():
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    error = None
     if request.method == 'POST':
         try:
-            name = request.form.get('customer_name', 'Guest')
+            name = request.form.get('customer_name', '').strip()
             purpose = request.form.get('purpose', '').lower()
             
+            if not name:
+                error = "Please enter your full name."
+                return render_template('index.html', error=error)
+                
+            conn = get_db_connection()
+            c = conn.cursor()
+
+            # Check if customer already has an active token
+            existing = c.execute("SELECT token_code FROM tokens WHERE customer_name = ? AND status = 'Waiting'", (name,)).fetchone()
+            if existing:
+                conn.close()
+                return render_template('index.html', error=f"You already have an active token: {existing['token_code']}")
+
             if any(word in purpose for word in ['cash', 'deposit', 'withdraw', 'money', 'pay', 'cheque']):
                 dept = "Cash Deposit"
             elif any(word in purpose for word in ['open', 'new', 'account', 'sign up']):
                 dept = "Account Opening"
             else:
                 dept = "Customer Inquiry"
-                
-            conn = get_db_connection()
-            c = conn.cursor()
 
             counters_raw = c.execute("SELECT * FROM counters").fetchall()
             
@@ -124,9 +135,9 @@ def index():
                                    recommended=recommended, 
                                    all_counters=counters_evaluated)
         except Exception as e:
-            return f"AI Engine Error during token generation: {e}", 500
+            return f"Engine Error: {e}", 500
         
-    return render_template('index.html')
+    return render_template('index.html', error=error)
 
 @app.route('/staff/login', methods=['GET', 'POST'])
 def staff_login():

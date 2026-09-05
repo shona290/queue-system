@@ -12,6 +12,10 @@
             <p>Intelligent Automated Queue Management</p>
         </div>
         
+        {% if error %}
+        <div class="alert-error">{{ error }}</div>
+        {% endif %}
+
         <form method="POST" action="/">
             <div class="form-group">
                 <label>Your Full Name</label>
