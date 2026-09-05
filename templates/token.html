@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Your Token Details</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="portal-card" style="text-align: center;">
+        <div class="brand-header">
+            <h2>Token Successfully Generated!</h2>
+            <p>You have been added to the queue.</p>
+        </div>
+        
+        <div class="token-box" style="background: #f3f4f6; padding: 20px; border-radius: 12px; margin: 20px 0;">
+            <span style="font-size: 14px; color: #6b7280;">Your Token Code</span>
+            <h1 style="margin: 5px 0; color: #4f46e5; font-size: 36px;">{{ token_code }}</h1>
+            <p style="margin: 0; font-weight: 600;">Assigned Department: {{ dept }}</p>
+        </div>
+
+        {% if fastest and fastest[0] != dept %}
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; border-radius: 8px; font-size: 13px; color: #1e40af; margin-bottom: 20px;">
+            💡 <strong>Smart Recommendation:</strong> 
+            {% if fastest[1] == 0 %}
+                {{ fastest[0] }} currently has no line and offers faster service!
+            {% else %}
+                {{ fastest[0] }} currently has a shorter queue ({{ fastest[1] }} waiting) if you prefer a faster option.
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div style="display: flex; gap: 10px;">
+            <a href="/track" class="btn-primary" style="text-decoration: none; text-align: center; flex: 1;">📊 View Live Status</a>
+            <a href="/" class="btn-secondary" style="text-decoration: none; text-align: center; flex: 1; background: #e5e7eb; color: #1f2937; padding: 12px; border-radius: 8px; font-weight: 600;">Get Another</a>
+        </div>
+    </div>
+</body>
+</html>

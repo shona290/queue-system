@@ -2,44 +2,47 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartQueue - Staff Console</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f8fafc; padding: 40px; margin: 0; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        h2 { color: #0f172a; margin: 0; }
-        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-        .token-card { background: white; padding: 20px; border-radius: 10px; border-left: 5px solid #0ea5e9; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .token-number { font-size: 24px; font-weight: bold; color: #0369a1; margin-bottom: 10px; }
-        .details { color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 15px; }
-        .complete-btn { background: #10b981; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; }
-        .complete-btn:hover { background: #059669; }
-        .refresh-btn { padding: 10px 20px; background: #0f172a; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    </style>
+    <title>Staff Console</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-
-    <div class="header">
-        <h2>Live Department Queue</h2>
-        <button class="refresh-btn" onclick="location.reload()">Refresh Data</button>
-    </div>
-
-    <div class="dashboard-grid">
-        {% if waiting %}
-            {% for t in waiting %}
-            <div class="token-card">
-                <div class="token-number">Token {{ t[1] }}</div>
-                <div class="details">
-                    <strong>Assigned Counter:</strong> {{ t[2] }}<br>
-                    <strong>Status:</strong> Waiting for Service
-                </div>
-                <a href="/complete/{{ t[0] }}" class="complete-btn">✔ Mark Completed</a>
+    <div class="portal-card" style="max-width: 650px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div>
+                <h2>Staff Console</h2>
+                <p style="margin:0; font-size:13px; color:#6b7280;">Manage live active tokens</p>
             </div>
-            {% endfor %}
+            <a href="/logout" style="background: #fee2e2; color: #991b1b; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600;">Logout</a>
+        </div>
+        
+        {% if waiting %}
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+                <tr style="border-bottom: 2px solid #e5e7eb; text-align: left;">
+                    <th style="padding: 10px;">Token</th>
+                    <th style="padding: 10px;">Customer</th>
+                    <th style="padding: 10px;">Department</th>
+                    <th style="padding: 10px;">Wait Time</th>
+                    <th style="padding: 10px;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in waiting %}
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                    <td style="padding: 12px; font-weight: bold; color: #4f46e5;">{{ row[1] }}</td>
+                    <td style="padding: 12px;">{{ row[2] }}</td>
+                    <td style="padding: 12px;">{{ row[3] }}</td>
+                    <td style="padding: 12px; color: #d97706; font-weight: 600;">{{ row[4] }} mins</td>
+                    <td style="padding: 12px;">
+                        <a href="/complete/{{ row[0] }}" style="background: #10b981; color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600;">Complete ✓</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         {% else %}
-            <div style="color: #64748b; font-style: italic; grid-column: 1 / -1;">No customers currently in the queue.</div>
+        <p style="text-align: center; color: #6b7280; padding: 30px 0;">No active customers waiting in the queue.</p>
         {% endif %}
     </div>
-
 </body>
 </html>
