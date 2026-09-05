@@ -2,10 +2,62 @@ import os
 import sqlite3
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session
-from werkzeug.security import check_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'smartqueue_super_secret_production_key')
+
+def init_db():
+    conn = sqlite3.connect('queue.db')
+    c = conn.cursor()
+    
+    # Create counters table
+    c.execute('''CREATE TABLE IF NOT EXISTS counters (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                    name TEXT, 
+                    queue_length INTEGER
+                )''')
+    
+    # Create tokens table
+    c.execute('''CREATE TABLE IF NOT EXISTS tokens (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                    token_code TEXT, 
+                    customer_name TEXT, 
+                    counter_id INTEGER, 
+                    status TEXT, 
+                    created_at TEXT
+                )''')
+
+    # Create users table
+    c.execute('''CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    active INTEGER DEFAULT 1,
+                    created_at TEXT
+                )''')
+
+    # Seed default staff account automatically on startup
+    c.execute("SELECT id FROM users WHERE username = ?", ('staff01',))
+    if not c.fetchone():
+        hashed_pw = generate_password_hash('Staff@123')
+        c.execute('''INSERT INTO users (username, password_hash, role, name, active, created_at)
+                     VALUES (?, ?, ?, ?, 1, datetime('now'))''',
+                  ('staff01', hashed_pw, 'STAFF', 'Default Staff Member'))
+
+    # Ensure default counters exist
+    for d in ["Cash Deposit", "Account Opening", "Customer Inquiry"]:
+        c.execute("SELECT id FROM counters WHERE name=?", (d,))
+        if not c.fetchone():
+            c.execute("INSERT INTO counters (name, queue_length) VALUES (?, 0)", (d,))
+
+    conn.commit()
+    conn.close()
+
+# Initialize database automatically every time the app boots up
+init_db()
 
 def get_db_connection():
     conn = sqlite3.connect('queue.db')
@@ -18,7 +70,6 @@ def index():
         name = request.form.get('customer_name', 'Guest')
         purpose = request.form.get('purpose', '').lower()
         
-        # Intelligent Service Recommendation & Routing
         if any(word in purpose for word in ['cash', 'deposit', 'withdraw', 'money', 'pay', 'cheque']):
             dept = "Cash Deposit"
         elif any(word in purpose for word in ['open', 'new', 'account', 'sign up']):
@@ -28,13 +79,6 @@ def index():
             
         conn = get_db_connection()
         c = conn.cursor()
-        
-        # Ensure default counters exist safely
-        for d in ["Cash Deposit", "Account Opening", "Customer Inquiry"]:
-            c.execute("SELECT id FROM counters WHERE name=?", (d,))
-            if not c.fetchone():
-                c.execute("INSERT INTO counters (name, queue_length) VALUES (?, 0)", (d,))
-                conn.commit()
 
         c.execute("SELECT id FROM counters WHERE name=?", (dept,))
         counter = c.fetchone()
@@ -53,7 +97,6 @@ def index():
         c.execute("INSERT INTO tokens (token_code, customer_name, counter_id, status, created_at) VALUES (?, ?, ?, 'Waiting', ?)", (token_code, name, counter_id, now_str))
         c.execute("UPDATE counters SET queue_length = queue_length + 1 WHERE id=?", (counter_id,))
         
-        # Find fastest alternative department recommendation
         c.execute("SELECT name, queue_length FROM counters ORDER BY queue_length ASC LIMIT 1")
         fastest = c.fetchone()
         
@@ -81,9 +124,9 @@ def staff_login():
         
         if user and check_password_hash(user['password_hash'], password):
             if user['active'] != 1:
-                error = "This staff account is inactive. Contact your administrator."
+                error = "This staff account is inactive."
             elif user['role'] not in ['STAFF', 'ADMIN']:
-                error = "Access denied. Insufficient privileges."
+                error = "Access denied."
             else:
                 session.clear()
                 session['user_id'] = user['id']
