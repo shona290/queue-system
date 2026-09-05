@@ -6,29 +6,30 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="container">
-        <h2>SmartQueue Portal</h2>
-        <p>Welcome! Select your department to join the queue.</p>
+    <div class="portal-card">
+        <div class="brand-header">
+            <h2>SmartQueue</h2>
+            <p>Intelligent Automated Queue Management</p>
+        </div>
         
         <form method="POST">
-            <label>Your Name:</label>
-            <input type="text" name="customer_name" required placeholder="Enter your name">
+            <div class="form-group">
+                <label>Your Full Name</label>
+                <input type="text" name="customer_name" required placeholder="e.g., Alex Morgan">
+            </div>
             
-            <label>Select Department:</label>
-            <select name="department" required>
-                <option value="Cash Deposit">Cash Deposit</option>
-                <option value="Account Opening">Account Opening</option>
-                <option value="Customer Inquiry">Customer Inquiry</option>
-            </select>
+            <div class="form-group">
+                <label>What do you need help with today?</label>
+                <input type="text" name="purpose" required placeholder="e.g., I want to deposit cash or open an account">
+                <small class="hint">Our system will intelligently route you to the right department.</small>
+            </div>
             
-            <button type="submit">Generate Token</button>
+            <button type="submit" class="btn-primary">Generate Smart Token</button>
         </form>
 
-        <hr style="margin: 20px 0;">
-        
-        <div style="text-align: center;">
-            <a href="/track" style="margin-right: 15px;">📊 View Live Queue Status</a>
-            <a href="/staff?key=mysecretstaffkey">🔐 Staff Console</a>
+        <div class="portal-footer">
+            <a href="/track">📊 Live Queue Status</a>
+            <a href="/staff-login">🔐 Staff Portal</a>
         </div>
     </div>
 </body>
